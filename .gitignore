@@ -1,0 +1,6 @@
+# Exclude Object and Listings folder
+**/Objects
+**/Listings
+
+# Exclude .user files
+*.happy
