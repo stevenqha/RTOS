@@ -7,13 +7,14 @@
 #include <stdint.h>
 #include <stdio.h>
 
-uint32_t msTicks = 0;
+//uint32_t msTicks = 0;
 
-void SysTick_Handler(void) {
-    msTicks++;
-}
+//void SysTick_Handler(void) {
+//    msTicks++;
+//}
 
 int main(void) {
+	/*
 	SysTick_Config(SystemCoreClock/1000);
 	printf("\nStarting...\n\n");
 	
@@ -25,5 +26,5 @@ int main(void) {
 			prev += period;
 		}
 	}
-		
+	*/	
 }
