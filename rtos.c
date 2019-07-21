@@ -2,7 +2,7 @@
  * rtos implementation.
  * @author Steven Ha, Benjamin Duo 2019
  */
- #include "rtos.h"
+#include "rtos.h"
 
 
 
@@ -10,12 +10,20 @@
 
 //enable interrupts
 
+//define osWaitForever
+#define osWaitForever  0xFFFFFFFFU
+
+//Define Mutex
+typedef struct {
+    bool mutex = 0;
+}osMutex;
+
 
 //Create Mutex
-
+void init_Mutex(osMutex *m)
 
 //Obtain Mutex
-void osAcquireMutex(void *arg){
+void osAcquireMutex(void *arg, ){ //need something for time
 	
 };
 
@@ -25,32 +33,37 @@ void osReleaseMutex(void *arg){
 };
 
 //Define Semaphore
-typedef uint32_t osSem_Id;
+typedef struct{
+    uint32_t count = 0;
+    //TCB *waitList
+}osSem_Id;
 
 //Initialize Semaphore
-void init_Sema(osSem_Id *s, uint32_t n)
-{
-    &s = n;
+void init_Sema(osSem_Id *s, uint32_t n){
+    s->count = n;
 }
 
-
 //Wait Semaphore
-void osSemWait(osSem_Id *s)
-{
+void osSemWait(osSem_Id *s){
     //disable interrupts
-    while(*s =< 0)
+    (s->count)--;
+
+    if(s->count < 0)
     {
+        //block task
         //enable int
-        //disable int
     }
-    (*s)--;
+    else
     //enable int
 }
 
 //Signal Semaphore
-void osSemSignal(osSem_Id *s)
-{
+void osSemSignal(osSem_Id *s){
     //disable inter
-    (s*)++;
-    //enable inter
+    (s->count)++;
+    if(s->count <= 0)
+    {
+        //unblock task
+    }
+    //enable interrupts
 }
