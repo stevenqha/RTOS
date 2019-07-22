@@ -28,17 +28,11 @@ typedef struct tcb{
 	uint32_t *stackPtr;
 } tcb_t;
 
-// Scheduler Control Block Struct
-typedef struct{
-	uint8_t curr;		// Index of current task 
-	uint8_t next; 	// Index of next task
-	tcb_t *running; // TCB of running task
-} schedule_t;
-
 // Semaphore Struct
 typedef struct{
 
 }sem_t;
+
 // Mutex Struct
 typedef struct{
 
