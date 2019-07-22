@@ -3,12 +3,11 @@
  * @author Steven Ha, Benjamin Duo 2019
  */
 
-#ifndef RTOS
-#define RTOS
+#ifndef __RTOS_H
+#define __RTOS_H
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "context.h"
 
 #define MAX_TASKS 6
 #define NUM_PRIORITY (MAX_TASKS - 1)
@@ -30,19 +29,19 @@ typedef struct tcb{
 
 // Semaphore Struct
 typedef struct{
-
+ int8_t count;
 }sem_t;
 
 // Mutex Struct
 typedef struct{
-
+	uint8_t count;
 }mutex_t;
 
 // Initialize RTOS
 void rtosInit(void);
 
 // Create Task/Thread
-bool rtosCreateTask(rtosTaskFunc_t func, void* argument, uint8_t priority);
+bool rtosCreateTask(rtosTaskFunc_t func, void* args, uint8_t priority);
 
 // PendSV Handler (For context switching)
 void PendSV_Handler(void);

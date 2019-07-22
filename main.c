@@ -6,12 +6,17 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "uart.h"
+#include "rtos.h"
 
 //uint32_t msTicks = 0;
 
 //void SysTick_Handler(void) {
 //    msTicks++;
 //}
+void task1(void *args){
+	printf("Task 2 running\n");
+}
 
 int main(void) {
 	/*
@@ -26,5 +31,11 @@ int main(void) {
 			prev += period;
 		}
 	}
-	*/	
+	*/
+	printf("Init RTOS\n");
+	rtosInit();
+	bool status = rtosCreateTask(task1, NULL, 3);
+	printf("Create Task Status: %d\n", status);
+	while(1){
+	}
 }
