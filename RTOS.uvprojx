@@ -388,11 +388,6 @@
               <FilePath>.\context.c</FilePath>
             </File>
             <File>
-              <FileName>main_default.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\main_default.c</FilePath>
-            </File>
-            <File>
               <FileName>Retarget.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Retarget.c</FilePath>
@@ -411,6 +406,11 @@
               <FileName>tcb_queue.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\tcb_queue.c</FilePath>
+            </File>
+            <File>
+              <FileName>main.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\main.c</FilePath>
             </File>
           </Files>
         </Group>

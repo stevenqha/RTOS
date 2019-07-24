@@ -14,6 +14,8 @@
 #define DEFAULT_PRIORITY 3
 #define MAIN_TASK 0
 
+extern uint32_t msTicks;
+
 typedef void (*rtosTaskFunc_t)(void *args);
 
 enum state_t{READY, RUNNING, BLOCKED, WAITING, INACTIVE};
