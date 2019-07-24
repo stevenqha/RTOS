@@ -172,6 +172,3 @@ void PendSV_Handler(void){
 	// Pop register contents from the next task's stack
 	// (Automatically happens when handler exits)
 }
-
-
-
