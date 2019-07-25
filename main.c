@@ -12,8 +12,9 @@
 
 // Choose which test to run
 //#define CONTEXT_SWITCHING
-#define RANDOM_TESTING
-
+//#define RANDOM_TESTING
+//#define MUTEX_SEMA
+#define SEMA
 
 #ifdef RANDOM_TESTING
 void task1(void *args){	
@@ -87,7 +88,7 @@ void led_Task(void *args){
 		else{
 			LPC_GPIO2->FIOCLR |= (0x01<<2); 
 		}
-		osThreadYield();
+		osTaskYield();
 	}
 }
 
@@ -133,7 +134,7 @@ void lcd_Task(void *args){
 		GLCD_DisplayString(5,4,1, (unsigned char*)s);
 		// GLCD_Clear(Blue);
 		
-		osThreadYield();
+		osTaskYield();
 	}
 }
 
@@ -153,7 +154,7 @@ void pot_Task(void *args){
 		adcRead = (LPC_ADC->ADGDR & (0xFFF<<4)) >> 4;
 		printf("ADC: %d\n", adcRead);
 	
-		osThreadYield();
+		osTaskYield();
 	}
 }
 
@@ -171,3 +172,144 @@ int main(void){
 }
 #endif 
 
+#ifdef MUTEX_SEMA
+//create mutexes and semaphores
+osMutex m1;
+osSem_Id s1;
+uint32_t count;
+
+void task1(void *args){ //prior 4
+    osSemWait(&s1);
+		int32_t counter = s1.count;
+		printf("T1 %d\n",counter);
+	  uint32_t delay = 7000;
+    printf("T1 has semaphore and will release it in %d seconds\n", delay/1000);
+    osDelay(delay);
+    osSemSignal(&s1);
+    
+	  while(true){
+    	  osTaskYield();
+    }
+}
+
+void task2(void *args){ //prior 4
+    osSemWait(&s1);
+		int32_t counter = s1.count;
+		printf("T2 %d\n",counter);
+	
+    while(true){
+			osAcquireMutex(&m1);
+			osTimer(1000);
+      printf("%d \n", count);
+			
+      osReleaseMutex(&m1);
+      osTaskYield();
+    }
+}
+
+void task3(void *args){ //prior 5, will need to wait for task1 to release
+	osDelay(4000);  
+	count = 1;
+    osSemWait(&s1);
+		int32_t counter = s1.count;
+		printf("T3 %d\n",counter);
+    
+    while(true){
+        osAcquireMutex(&m1);
+				printf("incrementing: ");
+				count++;
+        osReleaseMutex(&m1);
+        osTaskYield();
+    }
+}
+
+
+int main(void){
+	printf("Start ");
+
+	//intialize RTOS
+	osInit();
+	init_Sema(&s1, 2);
+	init_Mutex(&m1);
+
+	
+	osCreateTask(task1, NULL, 4);
+	osCreateTask(task2, NULL, 4);
+	osCreateTask(task3, NULL, 5);
+	printf("Tasks Created\n");
+	osKernalStart();
+
+	// Main task will not run because it's a lower priority
+	while(true){
+		//printf("");
+		printf("Main task running");
+		osTimer(1000);
+	}
+	
+}
+#endif
+
+
+#ifdef SEMA
+osSem_Id s1;
+uint32_t count = 0;
+
+void task1(void *args){ //prior 4
+    osSemWait(&s1);
+		int32_t counter = s1.count;
+	  uint32_t delay = 7000;
+    printf("T1 has semaphore and will release it in %d seconds\n", delay/1000);
+    osDelay(delay);
+    osSemSignal(&s1);
+    
+	  while(true){
+    	  osTaskYield();
+    }
+}
+
+void task2(void *args){ //prior 4
+    osSemWait(&s1);
+	
+    while(true){
+			osTimer(1000);
+      printf("%d \n", count);
+      osTaskYield();
+    }
+}
+
+void task3(void *args){ //prior 5, will need to wait for task1 to release
+	osDelay(4000);  
+	count = 1;
+	osSemWait(&s1);
+	int32_t counter = s1.count;
+	printf("T3 %d\n",counter);
+	
+	while(true){
+			printf("incrementing: ");
+			count++;
+			osTaskYield();
+	}
+}
+
+int main(void){
+	printf("Start ");
+
+	//intialize RTOS
+	osInit();
+	init_Sema(&s1, 2);
+
+	osCreateTask(task1, NULL, 5);
+	osCreateTask(task2, NULL, 5);
+	osCreateTask(task3, NULL, 5);
+	printf("Tasks Created\n");
+	osKernalStart();
+
+	// Main task will not run because it's a lower priority
+	while(true){
+		//printf("");
+		printf("Main task running");
+		osTimer(1000);
+	}
+	
+}
+#endif

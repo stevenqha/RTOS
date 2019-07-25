@@ -20,6 +20,7 @@ tcb_queue_t readyQueues[NUM_PRIORITY];			// Ready queue
 uint32_t readyQueueBitVector = 0;						// Vector representation of ready queue
 
 uint32_t msTicks = 0;
+bool kernalStart = false;
 
 // Initialize RTOS
 void osInit(){		
@@ -74,6 +75,10 @@ void osInit(){
 	osCreateTask(idleTask, NULL, 0);
 }
 
+void osKernalStart(void){
+	kernalStart = true;
+}
+	
 // Create Task/Thread
 bool osCreateTask(rtosTaskFunc_t func, void* args, uint8_t priority){
 	// Determine if there is an available TCB for the new task
@@ -85,7 +90,7 @@ bool osCreateTask(rtosTaskFunc_t func, void* args, uint8_t priority){
 	// printf("Task id: %d\n", tcb[taskCount].id);
 	
 	// Set priority of new task
-	if (priority > NUM_PRIORITY || priority < 0){
+	if (priority > NUM_PRIORITY){
 		priority = DEFAULT_PRIORITY;
 	}
 	tcb[taskCount].priority = priority;
@@ -118,7 +123,7 @@ bool osCreateTask(rtosTaskFunc_t func, void* args, uint8_t priority){
 
 
 // Thread yields to next task
-void osTaskYield(void){
+inline void osTaskYield(void){
 	SCB->ICSR |= (1 << 28);
 }
 
@@ -138,7 +143,7 @@ void SysTick_Handler(void){
 	msTicks++;
 	
 	// Run scheduler if there are more than one task
-	if(taskCount > 1){		
+	if(kernalStart){		
 			// Call PendSV_Handler to perform the context switch
 			SCB->ICSR |= (1 << 28);
 	}
@@ -246,4 +251,202 @@ void PendSV_Handler(void){
 // Idle Task
 void idleTask(void *args){
 	while(true);
+}
+
+
+
+
+
+
+
+
+//dequeue tasks in the TCB functions, enqueue is the same
+inline osStatus tcbMutexDequeue(tcb_queue_t *queue, tcb_t* task){
+	tcb_t* past = NULL;
+	tcb_t* search = NULL;
+
+	if(queue->p_head == NULL){ //exit if queue is empty
+		return osError;
+	}
+
+	search = queue->p_head;
+
+	while(search != task){ //find where the task is
+			past = search;
+			search = search->p_next_tcb;
+	} 
+	if(search == queue->p_head){ //task is the head
+		if(search->p_next_tcb == NULL){ //task is the only task in the queue
+			queue->p_head = NULL;
+			queue->p_tail = NULL;
+		}
+		else if(queue->p_head->p_next_tcb != NULL){ // there is 1 or more tasks behind it
+			queue->p_head = queue->p_head->p_next_tcb;
+		}
+	} 
+	else if(search->p_next_tcb == NULL){ //task is at the end of the queue
+			past->p_next_tcb = NULL;
+			queue->p_tail = past;
+	}
+	else if(search != queue->p_head && search != queue->p_tail){//between two tasks
+			past->p_next_tcb = search->p_next_tcb;
+			
+	}
+	else{
+		return osError;
+	}
+	task->p_next_tcb = NULL;
+	return osOK;	
+}
+
+
+//Create Mutex
+void init_Mutex(osMutex *m){
+    m->owner = NULL;
+    m->mutex = 1; //1 is unlocked
+    tcbQueueInit(&m->waitList);
+    m->priority = 0;
+    m->h_prior = 0; 
+}
+
+//Acquire Mutex
+void osAcquireMutex(osMutex *m){ //ignoring timeouts for simplicity
+	__disable_irq();
+    
+	if(m->mutex == 1){ //if mutex is free
+		m->owner = currTCB;
+		m->mutex = 0;
+		m->priority = currTCB->priority;	// Save owner's priority for priority inheritance
+		
+/*		
+			if(currTCB->priority < m->h_prior){
+					m->priority = currTCB->priority;
+					currTCB->priority = m->h_prior; //set equavialent to the current highest priority 
+
+					tcbMutexDequeue(&readyQueues[m->priority],m->owner); //remove task from its priority queue
+					tcbQueueEnqueue(&readyQueues[m->h_prior],m->owner); //move to current highest priority queue
+			}
+			else
+			{
+					m->h_prior = currTCB->priority;
+					m->priority = currTCB->priority;
+			}
+*/			
+			
+			__enable_irq();
+
+			return;
+	}
+	else{ // Mutex is locked
+		currTCB->state = WAITING;
+		tcbQueueEnqueue(&m->waitList, currTCB); //block task/place into waitList
+
+		if(currTCB->priority > m->h_prior){
+				m->h_prior = currTCB->priority; 
+				m->owner->priority = m->h_prior; 
+				tcbMutexDequeue(&readyQueues[m->priority], m->owner); //remove task from its priority queue
+				tcbQueueEnqueue(&readyQueues[m->h_prior], m->owner); //move to current highest priority queue
+		}
+	   
+		__enable_irq();
+		
+		//rtosEnterFunc();
+		osTaskYield();
+		//rtosExitFunc();
+	}
+};
+
+//Release Mutex
+void osReleaseMutex(osMutex *m){
+	__disable_irq();
+
+    if(m->mutex == 0 && currTCB == m->owner){
+        m->mutex = 1; //free mutex
+        currTCB->priority = m->priority; // Reset priority of the owner
+                
+        //tcbMutexDequeue(&readyQueues[m->h_prior],m->owner); //remove task from highest priority queue
+        //tcbQueueEnqueue(&readyQueues[m->priority],m->owner); //move to current previous priority queue
+        m->owner = NULL;
+        
+        if(!tcbQueueEmpty(&(m->waitList))){
+            uint8_t next_prior;
+            tcb_t *shift, *high;
+            shift = m->waitList.p_head;
+            next_prior = 0; //lowest priority
+
+            while(shift != NULL){
+                if(shift->priority > next_prior){ //find the highest priority task
+                    next_prior = shift->priority;
+                    high = shift;
+                }
+                shift = shift->p_next_tcb;
+            }
+						high->state = READY;
+            tcbMutexDequeue(&(m->waitList), high); 
+            tcbQueueEnqueue(&(readyQueues[next_prior]), high); //change the h.p. task from blocked to ready
+            m->h_prior = next_prior; //update the newest highest priority
+        }
+    }
+
+		__enable_irq();
+};
+
+
+
+//Initialize Semaphore
+void init_Sema(osSem_Id *s, int32_t n){
+    s->count = n;
+    tcbQueueInit(&s->waitList);
+}
+
+//Wait Semaphore
+void osSemWait(osSem_Id *s){
+    __disable_irq();
+    (s->count)--;
+
+    if(s->count >= 0){
+      __enable_irq();
+    }
+    else{
+			tcbQueueEnqueue(&(s->waitList), currTCB);
+			currTCB->state = WAITING;
+      __enable_irq();
+      osTaskYield();
+		}
+}
+
+//Signal Semaphore
+void osSemSignal(osSem_Id *s){
+    __disable_irq();
+		(s->count)++;
+	
+    if(s->count <= 0){
+        tcb_t *shift = s->waitList.p_head;
+        if(shift != NULL){ //move all tasks being blocked into the correct priority ready queue
+          shift = tcbQueueDequeue(&s->waitList);  
+					tcbQueueEnqueue(&(readyQueues[shift->priority]), shift);
+					shift->state = READY;
+					shift = shift->p_next_tcb;
+        }
+    }
+    __enable_irq();
+}
+
+
+__asm void rtosEnterFunc(void){
+	PUSH 	{R4-R11}
+	BX		LR
+}
+
+__asm void rtosExitFunc(void){
+	POP 	{R4-R11}
+	BX		LR
+}
+
+
+void osTimer(uint32_t delay){
+	uint32_t init_t = msTicks;
+	while(msTicks-init_t < delay)
+	{}
+	return;
 }

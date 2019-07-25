@@ -9,7 +9,21 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "rtos.h"
+//#include "rtos.h"
+
+enum state_t{READY, RUNNING, BLOCKED, WAITING, INACTIVE};
+
+// TCB Control Block Struct
+typedef struct tcb{
+	uint8_t id;
+	uint8_t priority;
+	enum state_t state;
+	uint32_t prev;
+	uint32_t period;
+	struct tcb *p_next_tcb;	
+	uint32_t *stackPtr;
+} tcb_t;
+
 
 typedef struct {
 	tcb_t *p_head;
