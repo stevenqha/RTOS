@@ -29,6 +29,11 @@ inline tcb_t* tcbQueueHead(tcb_queue_t *queue){
 	return queue->p_head;
 }
 
+// Get tail of queue
+inline tcb_t* tcbQueueTail(tcb_queue_t *queue){
+	return queue->p_tail;
+}
+
 // Enqueue a TCB into the queue
 inline void tcbQueueEnqueue(tcb_queue_t *queue, tcb_t *tcb){
 	if(queue->p_head == NULL){

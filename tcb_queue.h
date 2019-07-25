@@ -28,6 +28,9 @@ bool tcbQueueEmpty(tcb_queue_t *queue);
 // Get head of queue
 tcb_t* tcbQueueHead(tcb_queue_t *queue);
 
+// Get tail of queue
+tcb_t* tcbQueueTail(tcb_queue_t *queue);
+
 // Enqueue a TCB from the queue
 void tcbQueueEnqueue(tcb_queue_t *queue, tcb_t *tcb);
 

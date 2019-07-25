@@ -24,8 +24,10 @@ enum state_t{READY, RUNNING, BLOCKED, WAITING, INACTIVE};
 typedef struct tcb{
 	uint8_t id;
 	uint8_t priority;
-	struct tcb *p_next_tcb;	
 	enum state_t state;
+	uint32_t prev;
+	uint32_t period;
+	struct tcb *p_next_tcb;	
 	uint32_t *stackPtr;
 } tcb_t;
 
@@ -40,17 +42,26 @@ typedef struct{
 }mutex_t;
 
 // Initialize RTOS
-void rtosInit(void);
+void osInit(void);
 
-// Create Task/Thread
-bool rtosCreateTask(rtosTaskFunc_t func, void* args, uint8_t priority);
+// Create Task
+bool osCreateTask(rtosTaskFunc_t func, void* args, uint8_t priority);
 
-// PendSV Handler (For context switching)
+// Task yields to next task
+void osTaskYield(void);
+
+// Delay a task for n milliseconds
+void osDelay(uint32_t delay);
+
+// SysTick Handler (Calls scheduler after time slice)
+void SysTick_Handler(void);
+
+// PendSV Handler (Scheduler, Performs Context Switching)
 void PendSV_Handler(void);
 
-// SysTick Handler (Scheduler)
-void SysTick_Handler(void);
-	
+// Idle Task
+void idleTask(void *args);
+
 // Initialize Semaphore
 void semInit(sem_t *s, uint32_t count, uint32_t maxCount);
 
