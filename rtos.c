@@ -247,4 +247,3 @@ void PendSV_Handler(void){
 void idleTask(void *args){
 	while(true);
 }
-
