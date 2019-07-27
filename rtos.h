@@ -8,65 +8,94 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "tcb_queue.h"
 
 #define MAX_TASKS 6
-#define NUM_PRIORITY (MAX_TASKS - 1)
-#define DEFAULT_PRIORITY 3
+#define MAX_PRIORITY (MAX_TASKS - 1)
+#define DEFAULT_PRIORITY 2
 #define MAIN_TASK 0
 
 extern uint32_t msTicks;
 
 typedef void (*rtosTaskFunc_t)(void *args);
 
-enum state_t{READY, RUNNING, BLOCKED, WAITING, INACTIVE};
-
-// TCB Control Block Struct
-typedef struct tcb{
-	uint8_t id;
-	uint8_t priority;
-	struct tcb *p_next_tcb;	
-	enum state_t state;
-	uint32_t *stackPtr;
-} tcb_t;
-
-// Semaphore Struct
+//Define Semaphore
 typedef struct{
- int8_t count;
-}sem_t;
+    int32_t count;
+    tcb_queue_t waitList;
+}osSem_Id;
 
-// Mutex Struct
-typedef struct{
-	uint8_t count;
-}mutex_t;
+//Define Mutex
+typedef struct {
+    bool mutex;
+    tcb_queue_t waitList[MAX_TASKS];		// Waitlist for blocked tasks
+		uint8_t waitListBitVector;
+    tcb_t *owner;												// Pointer to owner of the task
+    uint8_t ownerPriority;							// Original Priority of Owner
+    //uint8_t h_prior; //Keep track of highest priority being blocked
+}osMutex;
+
+//define osStatus
+typedef bool osStatus;
+#define osOK 1
+#define osError 0
+
 
 // Initialize RTOS
-void rtosInit(void);
+void osInit(void);
 
-// Create Task/Thread
-bool rtosCreateTask(rtosTaskFunc_t func, void* args, uint8_t priority);
+// Starrt RTOS
+void osKernalStart(void);
 
-// PendSV Handler (For context switching)
+// Create Task
+bool osCreateTask(rtosTaskFunc_t func, void* args, uint8_t priority);
+
+// Task yields to next task
+void osTaskYield(void);
+
+// Delay a task for n milliseconds
+void osDelay(uint32_t delay);
+
+// SysTick Handler (Calls scheduler after time slice)
+void SysTick_Handler(void);
+
+// PendSV Handler (Scheduler, Performs Context Switching)
 void PendSV_Handler(void);
 
-// SysTick Handler (Scheduler)
-void SysTick_Handler(void);
-	
+// Idle Task
+void idleTask(void *args);
+
 // Initialize Semaphore
-void semInit(sem_t *s, uint32_t count, uint32_t maxCount);
+void init_Sema(osSem_Id *s, int32_t n);
 
 // Wait for Semaphore
-void semWait(sem_t *s);
+void osSemWait(osSem_Id *s);
 
 // Signal for semaphore
-void semSignal(sem_t *s);
+void osSemSignal(osSem_Id *s);
 
 // Intialize Mutex
-void mutexInit(mutex_t *m, uint8_t count);
+void init_Mutex(osMutex *m);
 
-// Wait for Mutex
-void mutexWait(mutex_t *s);
+// Acquire Mutex
+void osAcquireMutex(osMutex *m);
 
-// Signal for Mutex
-void mutexSignal(mutex_t *s);
+// Release Mutex
+void osReleaseMutex(osMutex *m);
+
+// Dequeue in Mutex and Semaphore WaitList
+osStatus tcbMutexDequeue(tcb_queue_t *queue, tcb_t* task);
+
+// Save function status
+void osEnterFunc(void);
+
+// Restore function status
+void osExitFunc(void);
+
+//Timer
+void osTimer(uint32_t delay);
+
+// Print the priority of the current task
+void osGetPriority(void);
 
 #endif

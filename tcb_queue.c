@@ -1,5 +1,6 @@
 /*
  * TCB Queue Implementation header file
+ * Includes TCB definition
  * Based on textbook code
  * @author Steven Ha 2019
  */
@@ -27,6 +28,11 @@ inline bool tcbQueueEmpty(tcb_queue_t *queue){
 // Get head of queue
 inline tcb_t* tcbQueueHead(tcb_queue_t *queue){
 	return queue->p_head;
+}
+
+// Get tail of queue
+inline tcb_t* tcbQueueTail(tcb_queue_t *queue){
+	return queue->p_tail;
 }
 
 // Enqueue a TCB into the queue
